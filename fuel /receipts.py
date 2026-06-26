@@ -11,15 +11,12 @@ from typing import Any, Optional
 
 RECEIPTS_VERSION = "0.1.0"
 
-
 def _sha256(data: str) -> str:
     return hashlib.sha256(data.encode("utf-8")).hexdigest()
-
 
 def _hash_content(content: Any) -> str:
     # Stable serialization — RFC8785 TODO, json.dumps+sort_keys is safe interim
     return _sha256(json.dumps(content, sort_keys=True, ensure_ascii=False))
-
 
 class ReceiptChain:
     def __init__(
@@ -50,7 +47,7 @@ class ReceiptChain:
         self._step += 1
         receipt = {
             "id": str(uuid.uuid4()),
-            "ts": int(time.time() * 1000),          # epoch-ms integer
+            "ts": int(time.time() * 1000), # epoch-ms integer
             "agent": self.agent,
             "principal": self.principal,
             "action": action,
@@ -67,7 +64,7 @@ class ReceiptChain:
             },
         }
         # Hash-chain: next prev_hash covers the full receipt (not just output)
-        self._prev_hash = _sha256(json.dumps(receipt, sort_keys=True))
+        self._prev_hash = _sha256(json.dumps(receipt, sort_keys=True, ensure_ascii=False))
         self._chain.append(receipt)
         if self.output_path:
             self._flush(receipt)
@@ -76,15 +73,15 @@ class ReceiptChain:
     def _flush(self, receipt: dict) -> None:
         self.output_path.parent.mkdir(parents=True, exist_ok=True)
         with self.output_path.open("a", encoding="utf-8") as f:
-            f.write(json.dumps(receipt) + "\n")   # JSONL — easy to stream/parse
+            f.write(json.dumps(receipt) + "\n") # JSONL — easy to stream/parse
 
     def verify_chain(self) -> bool:
         """Re-derive all prev_hashes and confirm integrity."""
         prev = "GENESIS"
         for r in self._chain:
-            if r["prev_hash"] != prev:
+            if r["prev_hash"]!= prev:
                 return False
-            prev = _sha256(json.dumps(r, sort_keys=True))
+            prev = _sha256(json.dumps(r, sort_keys=True, ensure_ascii=False))
         return True
 
     def to_agentreceipts_v1(self, receipt: dict) -> dict:
