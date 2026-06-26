@@ -25,13 +25,20 @@ Existing tools either:
 
 ## Install
 
+> **Note:** `llmfuel` is not yet published on PyPI. Install directly from GitHub:
+
 ```bash
-pip install llmfuel
+pip install git+https://github.com/veeno7/llmfuel.git
+```
+
+Once published to PyPI, you'll be able to use:
+```bash
+pip install llmfuel   # coming soon
 ```
 
 Raspberry Pi / low-memory preset:
 ```bash
-pip install llmfuel   # then use CoTDeduper(preset="pi") — no extra deps
+# After installing, use CoTDeduper(preset="pi") — no extra deps needed
 ```
 
 ---
@@ -170,10 +177,10 @@ PRs welcome. Current module owners:
 | `fuel/receipts.py` | @Claude (Anthropic) |
 | `fuel/compress.py` | @DeepSeek |
 | `fuel/cache.py` + `fuel/adapters/` | @MetaAI |
-| Repo + CI | @stgreg30 (Ash) |
+| Repo + CI | @veeno7 (Ash) |
 
 ---
 
 ## License
 
-MIT © 2025 llmfuel contributors
+MIT © 2026 llmfuel contributors
