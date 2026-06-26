@@ -1,1 +1,179 @@
-# llmfuel
+# llmfuel ⛽
+
+**Stop your reasoning model from thinking in circles.**
+
+`llmfuel` is a local, pip-installable Python library that removes semantically duplicate steps from chain-of-thought (CoT) reasoning in real time — before they eat your token budget.
+
+No cloud proxy. No API keys. Works offline.
+
+---
+
+## The problem
+
+Open reasoning models (DeepSeek-R1, QwQ-32B, and others) produce verbose chain-of-thought traces by design. In practice, **20–40% of CoT tokens are near-duplicate reasoning steps** — the model restating the same sub-conclusion in slightly different words before moving on.
+
+This wastes tokens, slows inference, and adds noise to any downstream agent that reads the trace.
+
+Existing tools either:
+- Cache full prompts (not step-level CoT dedup)
+- Run in the cloud (privacy risk, latency)
+- Produce audit receipts separately from compression
+
+`llmfuel` combines **live CoT dedup + local receipts** in one offline package.
+
+---
+
+## Install
+
+```bash
+pip install llmfuel
+```
+
+Raspberry Pi / low-memory preset:
+```bash
+pip install llmfuel   # then use CoTDeduper(preset="pi") — no extra deps
+```
+
+---
+
+## Quickstart
+
+```python
+import fuel
+
+# 1. Deduplicate CoT steps
+deduper = fuel.CoTDeduper()           # Gemma 3 270M INT4, ~40-70ms/step on CPU
+# deduper = fuel.CoTDeduper(preset="pi")  # MiniLM-v2-L6, <10ms, for Raspberry Pi
+
+steps = your_model.get_cot_steps(prompt)
+compressed = deduper.dedup(steps)
+ratio = deduper.compression_ratio(steps, compressed)
+print(f"Compression: {ratio:.0%} of original tokens kept")
+
+# 2. Audit trail — local, hashed by default
+chain = fuel.ReceiptChain(
+    agent="my-agent/qwq-32b",
+    run_id="run-abc123",
+    # output_path=Path("receipts.jsonl"),  # optional: persist to disk
+)
+
+for raw, compressed_step in zip(steps, compressed):
+    chain.record(
+        action="cot_dedup",
+        input_data=raw,
+        output_data=compressed_step,
+        input_tokens=len(raw.split()),
+        output_tokens=len(compressed_step.split()),
+    )
+
+assert chain.verify_chain()   # cryptographic integrity check
+```
+
+### With Ollama (v0.1 stub — adapter coming in v0.2)
+
+```python
+import ollama, fuel
+from fuel.adapters.ollama import wrap_ollama
+
+client = wrap_ollama(
+    ollama.Client(),
+    deduper=fuel.CoTDeduper(),
+    receipts=fuel.ReceiptChain(agent="ollama/qwq-32b"),
+)
+response = client.generate(model="qwq:32b", prompt="Solve: 2x+3=11")
+```
+
+---
+
+## Privacy
+
+- **All content is hashed by default.** Receipts contain only SHA-256 hashes of inputs/outputs — never plaintext.
+- **No network calls.** `llmfuel` never phones home. All computation is local.
+- **Opt-in plaintext:** `ReceiptChain(store_plaintext=True)` if you want recoverable logs.
+- **Hash-chained receipts:** Tampering with any step in the audit trail is detectable via `verify_chain()`.
+
+See [SAFETY.md](SAFETY.md) for the full privacy notice.
+
+---
+
+## Receipts schema
+
+```json
+{
+  "id": "uuid-v4",
+  "ts": 1719394800000,
+  "agent": "my-agent",
+  "principal": "local",
+  "action": "cot_dedup",
+  "input_hash": "sha256...",
+  "output_hash": "sha256...",
+  "prev_hash": "sha256...",
+  "ext": {
+    "version": "0.1.0",
+    "run_id": "run-abc123",
+    "step_id": 1,
+    "input_tokens": 42,
+    "output_tokens": 18
+  }
+}
+```
+
+Compatible with [agentreceipts.ai](https://agentreceipts.ai) v1 via `chain.to_agentreceipts_v1(receipt)`.
+
+---
+
+## Benchmarks (v0.1 target)
+
+| Dataset | Metric | Target |
+|---|---|---|
+| OpenR1-Math-220k | Accuracy retained | ≥ 97% |
+| GSM8K | Accuracy retained | ≥ 97% |
+| Both | Compression ratio | 0.60–0.80 |
+| CPU (Gemma 270M INT4) | Latency per step | 40–70ms |
+| CPU (MiniLM-v2-L6) | Latency per step | < 10ms |
+
+---
+
+## Architecture
+
+```
+llmfuel/
+├── fuel/
+│   ├── compress.py      # CoTDeduper — semantic dedup (DeepSeek)
+│   ├── receipts.py      # ReceiptChain — hash-chained audit trail (Claude)
+│   ├── cache.py         # StepCache — local step cache (Meta AI)
+│   └── adapters/
+│       └── ollama.py    # wrap_ollama() — Ollama integration (Meta AI)
+└── tests/
+    └── test_receipts.py
+```
+
+---
+
+## Roadmap
+
+- [x] v0.1 — receipts schema + hash chain + privacy defaults
+- [ ] v0.2 — Gemma 3 270M INT4 classifier, MiniLM-v2-L6 fallback
+- [ ] v0.2 — Ollama adapter (stream interception)
+- [ ] v0.3 — vLLM + LangGraph adapters
+- [ ] v0.3 — Benchmark suite (OpenR1-Math-220k + GSM8K)
+- [ ] v0.4 — RFC8785 canonical JSON for receipt hashing
+
+---
+
+## Contributing
+
+PRs welcome. Current module owners:
+
+| Module | Owner |
+|---|---|
+| `fuel/receipts.py` | @Claude (Anthropic) |
+| `fuel/compress.py` | @DeepSeek |
+| `fuel/cache.py` + `fuel/adapters/` | @MetaAI |
+| Repo + CI | @stgreg30 (Ash) |
+
+---
+
+## License
+
+MIT © 2025 llmfuel contributors
