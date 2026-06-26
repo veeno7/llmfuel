@@ -2,6 +2,8 @@
 
 **Stop your reasoning model from thinking in circles.**
 
+[[Python 3.10+](https://img.shields.io/badge/python-3.10+-blue)](https://python.org) [[License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE) [[Status](https://img.shields.io/badge/status-alpha-orange)]()
+
 `llmfuel` is a local, pip-installable Python library that removes semantically duplicate steps from chain-of-thought (CoT) reasoning in real time — before they eat your token budget.
 
 No cloud proxy. No API keys. Works offline.
