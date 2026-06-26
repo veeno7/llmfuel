@@ -87,7 +87,8 @@ class ReceiptChain:
     def to_agentreceipts_v1(self, receipt: dict) -> dict:
         """Thin adapter: emit agentreceipts.ai-compatible shape (ISO 8601 ts)."""
         from datetime import datetime, timezone
+        ts = datetime.fromtimestamp(receipt["ts"] / 1000, tz=timezone.utc)
         return {
             **receipt,
-            "ts": datetime.fromtimestamp(receipt["ts"] / 1000, tz=timezone.utc).isoformat(),
+            "ts": ts.isoformat().replace("+00:00", "Z"),
         }

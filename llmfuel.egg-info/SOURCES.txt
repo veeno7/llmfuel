@@ -1,0 +1,13 @@
+LICENSE
+README.md
+pyproject.toml
+fuel/_init_.py
+fuel/cache.py
+fuel/compress.py
+fuel/receipts.py
+llmfuel.egg-info/PKG-INFO
+llmfuel.egg-info/SOURCES.txt
+llmfuel.egg-info/dependency_links.txt
+llmfuel.egg-info/requires.txt
+llmfuel.egg-info/top_level.txt
+tests/test_receipts.py
