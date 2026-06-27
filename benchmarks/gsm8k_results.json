@@ -1,0 +1,26 @@
+[
+  {
+    "index": 1,
+    "question": "If one hen lays 3 eggs every day, how many eggs does she lay in 7 days?",
+    "target": 21.0,
+    "original_steps": 4,
+    "deduped_steps": 4,
+    "ratio": 1.0
+  },
+  {
+    "index": 2,
+    "question": "A car travels 180 miles in 3 hours. What is its average speed in miles per hour?",
+    "target": 60.0,
+    "original_steps": 4,
+    "deduped_steps": 4,
+    "ratio": 1.0
+  },
+  {
+    "index": 3,
+    "question": "A rectangle is 5 meters long and 3 meters wide. What is its area?",
+    "target": 15.0,
+    "original_steps": 4,
+    "deduped_steps": 4,
+    "ratio": 1.0
+  }
+]
