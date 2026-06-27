@@ -44,3 +44,20 @@ def test_dedup_removes_math_paraphrases():
     assert len(out) == 2
     assert out[0] == "The derivative of x squared is 2x."
     assert out[1] == "So the final answer is 2x."
+
+
+def test_aggressive_mode_removes_more_repetitions():
+    steps = [
+        "First, I solve 2+2.",
+        "First, I solve it again in another way.",
+        "Then I check the arithmetic carefully.",
+        "Then I check the arithmetic carefully again.",
+        "So the final answer is 4.",
+    ]
+
+    deduper = CoTDeduper(preset="pi", aggressiveness="aggressive")
+    out = deduper.dedup(steps)
+
+    assert len(out) == 2
+    assert out[0] == "First, I solve 2+2."
+    assert out[1] == "So the final answer is 4."

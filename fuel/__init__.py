@@ -12,6 +12,8 @@ for open models (DeepSeek-R1, QwQ, etc.). Fully offline, no cloud proxy.
 from .receipts import ReceiptChain
 from .compress import CoTDeduper
 from .model_utils import ensure_gemma_model
+from .adapters.api import wrap_api_response
+from .adapters.openai_compatible import OpenAICompatibleAdapter
 
 __version__ = "0.1.0"
-__all__ = ["ReceiptChain", "CoTDeduper", "ensure_gemma_model"]
+__all__ = ["ReceiptChain", "CoTDeduper", "ensure_gemma_model", "wrap_api_response", "OpenAICompatibleAdapter"]

@@ -115,7 +115,7 @@ for raw, compressed_step in zip(steps, compressed):
 assert chain.verify_chain()   # cryptographic integrity check
 ```
 
-### With Ollama (v0.1 stub — adapter coming in v0.2)
+### With Ollama
 
 ```python
 import ollama, fuel
@@ -123,10 +123,31 @@ from fuel.adapters.ollama import wrap_ollama
 
 client = wrap_ollama(
     ollama.Client(),
-    deduper=fuel.CoTDeduper(),
+    deduper=fuel.CoTDeduper(aggressiveness="aggressive"),
     receipts=fuel.ReceiptChain(agent="ollama/qwq-32b"),
 )
 response = client.generate(model="qwq:32b", prompt="Solve: 2x+3=11")
+```
+
+### With any API-style response
+
+```python
+from fuel import CoTDeduper, ReceiptChain, wrap_api_response
+
+response = {"text": "Step 1\nStep 1\nFinal answer"}
+result = wrap_api_response(response, CoTDeduper(aggressiveness="aggressive"), ReceiptChain(agent="api-demo"))
+print(result["text"])
+```
+
+### With OpenAI-compatible SDKs
+
+```python
+from openai import OpenAI
+from fuel import CoTDeduper, OpenAICompatibleAdapter
+
+client = OpenAICompatibleAdapter(OpenAI(api_key="sk-..."), deduper=CoTDeduper(aggressiveness="aggressive"))
+response = client.chat_completions_create(model="gpt-4o-mini", messages=[{"role": "user", "content": "Solve 2+2"}])
+print(response.choices[0].message.content)
 ```
 
 ---

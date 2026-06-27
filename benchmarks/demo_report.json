@@ -1,0 +1,14 @@
+[
+  {
+    "index": 1,
+    "ratio": 0.6667,
+    "original_tokens": 9,
+    "compressed_tokens": 6
+  },
+  {
+    "index": 2,
+    "ratio": 0.7143,
+    "original_tokens": 7,
+    "compressed_tokens": 5
+  }
+]

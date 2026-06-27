@@ -99,12 +99,12 @@ def _embed_simple(texts: list[str]) -> np.ndarray:
 PRESETS: dict[str, dict] = {
     "default": {
         "model_id": "google/gemma-3-270m", # INT4 quantized — future
-        "similarity_threshold": 0.90,
+        "similarity_threshold": 0.86,
         "max_tokens_per_step": 512,
     },
     "pi": {
         "model_id": "sentence-transformers/all-MiniLM-L6-v2",
-        "similarity_threshold": 0.82,
+        "similarity_threshold": 0.78,
         "max_tokens_per_step": 256,
     },
 }
@@ -116,6 +116,7 @@ class CoTDeduper:
         preset: str = "default",
         verbose: bool = False,
         receipts: Optional["ReceiptChain"] = None,
+        aggressiveness: str = "balanced",
     ):
         cfg = PRESETS.get(preset, PRESETS["default"])
         self.model = model or cfg["model_id"]
@@ -123,6 +124,7 @@ class CoTDeduper:
         self.verbose = verbose
         self.receipts = receipts
         self.preset = preset
+        self.aggressiveness = aggressiveness
         self._encoder: Optional[Any] = None
         self._embed_fn: Optional[Callable[[list[str]], np.ndarray]] = None
 
@@ -179,14 +181,14 @@ class CoTDeduper:
             previous_tokens = set(re.findall(r"\w+", previous))
             overlap = len(current_tokens & previous_tokens) / max(1, len(current_tokens | previous_tokens))
             lexical_ratio = SequenceMatcher(None, current, previous).ratio()
-            reasoning_words = {"solve", "add", "calculate", "compute", "check", "reason", "step", "think", "consider"}
-            conclusion_words = {"answer", "final", "therefore", "thus", "so", "conclude", "conclusion", "result"}
+            reasoning_words = {"solve", "add", "calculate", "compute", "check", "reason", "step", "think", "consider", "first", "then", "next", "now", "again", "also"}
+            conclusion_words = {"answer", "final", "therefore", "thus", "so", "conclude", "conclusion", "result", "overall", "summary"}
             has_reasoning = bool(current_tokens & reasoning_words) and bool(previous_tokens & reasoning_words)
             has_conclusion = bool(current_tokens & conclusion_words) or bool(previous_tokens & conclusion_words)
             repeated_reasoning = (
                 has_reasoning
                 and not has_conclusion
-                and (overlap >= 0.15 or len(current_tokens & previous_tokens) >= 1 or lexical_ratio >= 0.6)
+                and (overlap >= 0.10 or len(current_tokens & previous_tokens) >= 1 or lexical_ratio >= 0.55)
             )
             semantic_similarity = 0.0
             if embeddings.size and embeddings.shape[0] > i and embeddings.shape[0] > kept_idx[-1]:
@@ -195,14 +197,19 @@ class CoTDeduper:
                 if prev_emb.ndim == 1 and curr_emb.ndim == 1:
                     semantic_similarity = float(np.dot(prev_emb, curr_emb))
             semantic_duplicate = semantic_similarity >= self.threshold and not has_conclusion
+            short_repetition = len(current_tokens) <= 4 and len(previous_tokens) <= 4 and len(current_tokens & previous_tokens) >= 1
+            aggressive = self.aggressiveness in {"aggressive", "max"}
+            threshold_overlap = 0.5 if aggressive else 0.4
+            threshold_ratio = 0.8 if aggressive else 0.75
             is_duplicate = (
                 current == previous
                 or current in previous
                 or previous in current
-                or overlap >= 0.5
-                or lexical_ratio >= 0.8
+                or overlap >= threshold_overlap
+                or lexical_ratio >= threshold_ratio
                 or repeated_reasoning
                 or semantic_duplicate
+                or short_repetition
             )
             if is_duplicate:
                 if self.receipts:
