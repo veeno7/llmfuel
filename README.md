@@ -43,6 +43,15 @@ Raspberry Pi / low-memory preset:
 # After installing, use CoTDeduper(preset="pi") — no extra deps needed
 ```
 
+### Optional: download the Gemma GGUF model
+If you want the default Gemma-based embedding path, download the model once:
+
+```bash
+python -m fuel --download-model
+```
+
+This will place the model under `models/` so `CoTDeduper(preset="default")` can load it locally.
+
 ---
 
 ## Quickstart
