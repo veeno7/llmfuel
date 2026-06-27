@@ -8,6 +8,8 @@
 
 No cloud proxy. No API keys. Works offline.
 
+> `llmfuel` is not a chat UI or standalone chatbot. It is a tool you integrate into your own model or API client so it can deduplicate reasoning output and save tokens.
+
 ---
 
 ## The problem
@@ -83,6 +85,10 @@ CI runs the same test suite automatically on pushes and pull requests via GitHub
 ---
 
 ## Quickstart
+
+`llmfuel` is designed to integrate with your own model or API client. It does not provide a built-in chat UI.
+
+Use it like a helper layer around your existing model calls so you can deduplicate reasoning traces and save tokens while still using your own AI stack.
 
 ```python
 import fuel
