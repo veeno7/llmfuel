@@ -107,9 +107,9 @@ class CoTDeduper:
 
         raise RuntimeError(f"Unknown preset: {self.preset}")
 
-    def dedup(self, steps: list[str]) -> list[str]:
+    def dedup(self, steps: list[str], return_kept_idx: bool = False):
         if not steps:
-            return []
+            return ([], []) if return_kept_idx else []
         if self._embed_fn is None:
             self._load_encoder()
 
@@ -133,7 +133,8 @@ class CoTDeduper:
                 if self.verbose:
                     print(f"[fuel] dropped step {i} (sim={sims.max():.2f})")
 
-        return [steps[i] for i in kept_idx]
+        kept_steps = [steps[i] for i in kept_idx]
+        return (kept_steps, kept_idx) if return_kept_idx else kept_steps
 
     def compression_ratio(self, original: list[str], compressed: list[str]) -> float:
         orig_tokens = sum(len(s.split()) for s in original)

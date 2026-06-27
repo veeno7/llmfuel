@@ -46,9 +46,16 @@ def wrap_ollama(
     def _extract_think_steps(text: str) -> list[str]:
         return [match.group(1).strip() for match in _THINK_TAG.finditer(text)]
 
-    def _rebuild_text(original: str, compressed_steps: list[str]) -> str:
+    def _rebuild_text(original: str, compressed_steps: list[str], kept_idx: list[int]) -> str:
+        kept_iter = iter(compressed_steps)
+        idx = [0]
+
         def replacer(match: re.Match) -> str:
-            return "<think>" + compressed_steps.pop(0) + "</think>"
+            value = ""
+            if idx[0] in kept_idx:
+                value = "<think>" + next(kept_iter) + "</think>"
+            idx[0] += 1
+            return value
 
         return _THINK_TAG.sub(replacer, original)
 
@@ -66,19 +73,11 @@ def wrap_ollama(
         if not steps:
             return response
 
-        compressed = deduper.dedup(steps)
-        if receipts is not None:
-            for raw_step, compressed_step in zip(steps, compressed):
-                if raw_step != compressed_step:
-                    receipts.record(
-                        action="cot_dedup",
-                        input_data=raw_step,
-                        output_data=compressed_step,
-                        input_tokens=len(raw_step.split()),
-                        output_tokens=len(compressed_step.split()),
-                    )
+        if receipts is not None and deduper.receipts is None:
+            deduper.receipts = receipts
 
-        new_text = _rebuild_text(text, list(compressed))
+        compressed, kept_idx = deduper.dedup(steps, return_kept_idx=True)
+        new_text = _rebuild_text(text, list(compressed), kept_idx)
 
         if isinstance(response, str):
             return new_text
