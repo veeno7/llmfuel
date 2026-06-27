@@ -18,7 +18,7 @@ def load_gsm8k_sample():
         raise RuntimeError("datasets package is unavailable")
 
     try:
-        return load_dataset("gsm8k", "main", split="test[:50]")
+        return load_dataset("openai/gsm8k", "main", split="test[:50]")
     except Exception as exc:
         print("Warning: unable to load GSM8K from Hugging Face:", exc)
         print("Using a small fallback sample instead.")
