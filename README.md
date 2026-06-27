@@ -6,7 +6,7 @@
 
 `llmfuel` is a local, pip-installable Python library that removes semantically duplicate steps from chain-of-thought (CoT) reasoning in real time — before they eat your token budget.
 
-No cloud proxy. No API keys. Works offline.
+Designed to operate locally for deduplication and audit receipts. Optional model downloads or integration adapters may perform network I/O when explicitly invoked.
 
 ---
 
@@ -154,8 +154,8 @@ print(response.choices[0].message.content)
 
 ## Privacy
 
-- **All content is hashed by default.** Receipts contain only SHA-256 hashes of inputs/outputs — never plaintext.
-- **No network calls.** `llmfuel` never phones home. All computation is local.
+- **All content is hashed by default.** Receipts contain SHA-256 hashes of inputs/outputs by default; plaintext storage is opt-in.
+- **No telemetry or phone-home.** `llmfuel` does not send usage data. However, optional operations (for example, model downloads via `ensure_gemma_model`) or external adapter clients may perform network I/O when you explicitly invoke them.
 - **Opt-in plaintext:** `ReceiptChain(store_plaintext=True)` if you want recoverable logs.
 - **Hash-chained receipts:** Tampering with any step in the audit trail is detectable via `verify_chain()`.
 
@@ -221,7 +221,7 @@ llmfuel/
 
 - [x] v0.1 — receipts schema + hash chain + privacy defaults
 - [ ] v0.2 — Gemma 3 270M INT4 classifier, MiniLM-v2-L6 fallback
-- [ ] v0.2 — Ollama adapter (stream interception)
+-- [ ] v0.2 — Ollama adapter (stream interception) — partially implemented (see `fuel/adapters/ollama.py` and `fuel/adapters/ollama_stream.py`)
 - [ ] v0.3 — vLLM + LangGraph adapters
 - [ ] v0.3 — Benchmark suite (OpenR1-Math-220k + GSM8K)
 - [ ] v0.4 — RFC8785 canonical JSON for receipt hashing
