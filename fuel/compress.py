@@ -8,11 +8,53 @@ Pi fallback preset: MiniLM-v2-L6 (<10ms, no GPU needed)
 """
 
 from __future__ import annotations
-from typing import Optional, TYPE_CHECKING
+from pathlib import Path
+from typing import Any, Callable, Optional, TYPE_CHECKING
 import numpy as np
 
 if TYPE_CHECKING:
     from .receipts import ReceiptChain
+
+_gemma_model: Optional[Any] = None
+
+
+def _load_gemma():
+    global _gemma_model
+    if _gemma_model is not None:
+        return _gemma_model
+
+    try:
+        from llama_cpp import Llama
+    except ImportError as exc:
+        raise RuntimeError("llama_cpp is not installed") from exc
+
+    model_path = Path("models/gemma-3-270m-it-int4.gguf")
+    if not model_path.exists():
+        raise FileNotFoundError(
+            f"Gemma GGUF model not found at {model_path}. "
+            "Install it in the models/ directory or use preset='pi' instead."
+        )
+
+    _gemma_model = Llama(
+        model_path=str(model_path),
+        embedding=True,
+        n_ctx=512,
+        verbose=False,
+        n_gpu_layers=0,
+    )
+    return _gemma_model
+
+
+def _embed_gemma(texts: list[str]) -> np.ndarray:
+    model = _load_gemma()
+    embs = [model.create_embedding(t)["data"]["embedding"] for t in texts]
+    arr = np.array(embs, dtype=np.float32)
+    norms = np.linalg.norm(arr, axis=1, keepdims=True)
+    return arr / np.where(norms == 0, 1.0, norms)
+
+
+def _embed_minilm(texts: list[str], model: Any) -> np.ndarray:
+    return model.encode(texts, normalize_embeddings=True, show_progress_bar=False)
 
 PRESETS: dict[str, dict] = {
     "default": {
@@ -40,23 +82,38 @@ class CoTDeduper:
         self.threshold = cfg["similarity_threshold"]
         self.verbose = verbose
         self.receipts = receipts
-        self._encoder = None
+        self.preset = preset
+        self._encoder: Optional[Any] = None
+        self._embed_fn: Optional[Callable[[list[str]], np.ndarray]] = None
 
     def _load_encoder(self):
-        # v0.1: use MiniLM for both presets (Gemma 3 270M INT4 coming in v0.2)
-        from sentence_transformers import SentenceTransformer
-        model_id = "sentence-transformers/all-MiniLM-L6-v2"
-        self._encoder = SentenceTransformer(model_id)
+        if self.preset == "default":
+            try:
+                _load_gemma()
+                self._embed_fn = _embed_gemma
+                return
+            except Exception as exc:
+                if self.verbose:
+                    print(f"[fuel] warning: Gemma fallback to MiniLM: {exc}")
+                self.preset = "pi"
+
+        if self.preset == "pi":
+            from sentence_transformers import SentenceTransformer
+
+            model_id = "sentence-transformers/all-MiniLM-L6-v2"
+            self._encoder = SentenceTransformer(model_id)
+            self._embed_fn = lambda texts: _embed_minilm(texts, self._encoder)
+            return
+
+        raise RuntimeError(f"Unknown preset: {self.preset}")
 
     def dedup(self, steps: list[str]) -> list[str]:
         if not steps:
             return []
-        if self._encoder is None:
+        if self._embed_fn is None:
             self._load_encoder()
 
-        embeddings = self._encoder.encode(
-            steps, normalize_embeddings=True, show_progress_bar=False
-        )
+        embeddings = self._embed_fn(steps)
         kept_idx = [0]
         kept_embs = [embeddings[0]]
 

@@ -35,7 +35,7 @@ pip install git+https://github.com/veeno7/llmfuel.git
 
 Once published to PyPI, you'll be able to use:
 ```bash
-pip install llmfuel   # coming soon
+pip install git+https://github.com/veeno7/llmfuel.git@v0.1.0-alpha
 ```
 
 Raspberry Pi / low-memory preset:
