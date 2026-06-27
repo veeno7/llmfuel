@@ -52,6 +52,34 @@ python -m fuel --download-model
 
 This will place the model under `models/` so `CoTDeduper(preset="default")` can load it locally.
 
+### CLI helpers
+You can also run simple local workflows directly from the command line:
+
+```bash
+llmfuel download-model
+llmfuel benchmark --limit 10 --output benchmarks/results.json
+```
+
+Optional extras for richer setups:
+
+```bash
+pip install .[gemma]
+pip install .[ollama]
+pip install .[all]
+```
+
+### Contributor workflow
+Useful helpers for local development and release checks:
+
+```bash
+make install
+make test
+make benchmark
+make download-model
+```
+
+CI runs the same test suite automatically on pushes and pull requests via GitHub Actions.
+
 ---
 
 ## Quickstart

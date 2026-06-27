@@ -67,9 +67,13 @@ def _embed_gemma(texts: list[str]) -> np.ndarray:
             embedding = data.get("embedding")
         else:
             raise ValueError(f"Unexpected Gemma embedding payload: {payload}")
-        embs.append(embedding)
 
-    arr = np.array(embs, dtype=np.float32)
+        if isinstance(embedding, list):
+            embs.append(np.array(embedding, dtype=np.float32))
+        else:
+            embs.append(np.array([float(embedding)], dtype=np.float32))
+
+    arr = np.vstack(embs) if embs else np.empty((0, 0), dtype=np.float32)
     norms = np.linalg.norm(arr, axis=1, keepdims=True)
     return arr / np.where(norms == 0, 1.0, norms)
 

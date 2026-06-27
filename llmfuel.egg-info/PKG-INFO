@@ -9,6 +9,14 @@ Description-Content-Type: text/markdown
 License-File: LICENSE
 Provides-Extra: dev
 Requires-Dist: pytest>=7.0; extra == "dev"
+Provides-Extra: ollama
+Requires-Dist: ollama>=0.1.0; extra == "ollama"
+Provides-Extra: gemma
+Requires-Dist: llama-cpp-python>=0.2.0; extra == "gemma"
+Provides-Extra: all
+Requires-Dist: ollama>=0.1.0; extra == "all"
+Requires-Dist: llama-cpp-python>=0.2.0; extra == "all"
+Requires-Dist: pytest>=7.0; extra == "all"
 Dynamic: license-file
 
 # llmfuel ⛽
@@ -48,12 +56,37 @@ pip install git+https://github.com/veeno7/llmfuel.git
 
 Once published to PyPI, you'll be able to use:
 ```bash
-pip install llmfuel   # coming soon
+pip install git+https://github.com/veeno7/llmfuel.git@v0.1.0-alpha
 ```
 
 Raspberry Pi / low-memory preset:
 ```bash
 # After installing, use CoTDeduper(preset="pi") — no extra deps needed
+```
+
+### Optional: download the Gemma GGUF model
+If you want the default Gemma-based embedding path, download the model once:
+
+```bash
+python -m fuel --download-model
+```
+
+This will place the model under `models/` so `CoTDeduper(preset="default")` can load it locally.
+
+### CLI helpers
+You can also run simple local workflows directly from the command line:
+
+```bash
+llmfuel download-model
+llmfuel benchmark --limit 10 --output benchmarks/results.json
+```
+
+Optional extras for richer setups:
+
+```bash
+pip install .[gemma]
+pip install .[ollama]
+pip install .[all]
 ```
 
 ---
