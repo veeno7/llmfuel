@@ -13,6 +13,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Any, Callable, Optional, TYPE_CHECKING
 import numpy as np
+from difflib import SequenceMatcher
 
 from .model_utils import ensure_gemma_model
 
@@ -98,12 +99,12 @@ def _embed_simple(texts: list[str]) -> np.ndarray:
 PRESETS: dict[str, dict] = {
     "default": {
         "model_id": "google/gemma-3-270m", # INT4 quantized — future
-        "similarity_threshold": 0.92,
+        "similarity_threshold": 0.90,
         "max_tokens_per_step": 512,
     },
     "pi": {
         "model_id": "sentence-transformers/all-MiniLM-L6-v2",
-        "similarity_threshold": 0.90,
+        "similarity_threshold": 0.82,
         "max_tokens_per_step": 256,
     },
 }
@@ -174,7 +175,35 @@ class CoTDeduper:
         for i in range(1, len(steps)):
             current = steps[i].strip().lower()
             previous = steps[kept_idx[-1]].strip().lower()
-            is_duplicate = current == previous or current in previous or previous in current
+            current_tokens = set(re.findall(r"\w+", current))
+            previous_tokens = set(re.findall(r"\w+", previous))
+            overlap = len(current_tokens & previous_tokens) / max(1, len(current_tokens | previous_tokens))
+            lexical_ratio = SequenceMatcher(None, current, previous).ratio()
+            reasoning_words = {"solve", "add", "calculate", "compute", "check", "reason", "step", "think", "consider"}
+            conclusion_words = {"answer", "final", "therefore", "thus", "so", "conclude", "conclusion", "result"}
+            has_reasoning = bool(current_tokens & reasoning_words) and bool(previous_tokens & reasoning_words)
+            has_conclusion = bool(current_tokens & conclusion_words) or bool(previous_tokens & conclusion_words)
+            repeated_reasoning = (
+                has_reasoning
+                and not has_conclusion
+                and (overlap >= 0.15 or len(current_tokens & previous_tokens) >= 1 or lexical_ratio >= 0.6)
+            )
+            semantic_similarity = 0.0
+            if embeddings.size and embeddings.shape[0] > i and embeddings.shape[0] > kept_idx[-1]:
+                prev_emb = embeddings[kept_idx[-1]]
+                curr_emb = embeddings[i]
+                if prev_emb.ndim == 1 and curr_emb.ndim == 1:
+                    semantic_similarity = float(np.dot(prev_emb, curr_emb))
+            semantic_duplicate = semantic_similarity >= self.threshold and not has_conclusion
+            is_duplicate = (
+                current == previous
+                or current in previous
+                or previous in current
+                or overlap >= 0.5
+                or lexical_ratio >= 0.8
+                or repeated_reasoning
+                or semantic_duplicate
+            )
             if is_duplicate:
                 if self.receipts:
                     self.receipts.record(
@@ -185,7 +214,8 @@ class CoTDeduper:
                         output_tokens=0,
                     )
                 if self.verbose:
-                    print(f"[fuel] dropped step {i} (lexical duplicate)")
+                    reason = "semantic" if semantic_duplicate else "lexical"
+                    print(f"[fuel] dropped step {i} ({reason} duplicate, ratio={lexical_ratio:.2f}, sim={semantic_similarity:.2f})")
                 continue
 
             kept_idx.append(i)
